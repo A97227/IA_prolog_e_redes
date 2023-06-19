@@ -1,0 +1,282 @@
+%Declarações iniciais.
+:- use_module( library( 'listing' ) ).
+:- style_check(-discontiguous).
+:- style_check(-singleton).
+:- set_prolog_flag(unknown,fail).
+
+% Declarações iniciais dos predicados.
+:- op( 900,xfy,'::' ).
+:- dynamic utente/6.
+:- dynamic ato/10.
+:- dynamic marcador/7.
+
+% Extensão do meta-predicado nao-->{V,F}.
+
+nao( Questao ):-
+	 Questao, !, fail.
+nao( Questao ).
+
+%Extensão do predicado utente: Idutente, Nome do Utente, Data de nascimento, Sexo --> {V,F,D}.
+
+utente(123456780, antonio, 30,06,1990, m).
+utente(987654321, beatriz, 30,07,1985, f).
+utente(135246978, carlos, 30,08,1987, m).
+utente(181818181, luis, 18,06,2002, m).
+utente(845845845, sara, 08,04,2002, f).
+utente(444444444, sandra, 03,04,2002, f).
+
+%Extensão do predicado ato: IDato, Data, IDutente,Idade,Colesterol,Pulsação,Pressão-->{V,F,D}.
+ato(gmr2067, 30,06,2020, 123456780, 30, 140, 70, 60,123).
+ato(gmr2183, 30,07,2021, 987654321, 36, 190, 60, 70,142).
+ato(gmr2297, 30,06,2022, 135246978, 32, 230, 90, 65,151).
+ato(gmr1818, 25,12,2019, 181818181, 20, 130, 80, 55,112).
+ato(gmr188, 25,12,2019, 181818181, 20, 130, 80, 55,112).
+ato(gmr4855, 04,04,2020, 845845845, 20, 200, 70, 69,123).
+ato(gmr4444, 10,09,2022, 444444444, 20, 150, 60, 60,90).
+
+%Extensão do predicado marcador: IDmarcador, Análise, Idademin,Idademax,  sexo, Mínimo, Máximo--> {V,F,D}.
+marcador(ctm01, colesterol, 18, 30, m, 0, 170).
+marcador(ctf02, colesterol, 18, 30, f, 0, 160).
+marcador(ctm03, colesterol, 31, 60, m, 0, 190).
+marcador(ctf04, colesterol, 31, 60, f, 0, 180).
+marcador(ctf05, colesterol, 61, 95, m,0, 120).
+marcador(ctf06, colesterol, 61, 95, f, 0, 130).
+marcador(psm07, pulsacao, 18, 25, m, 60, 80).
+marcador(psm08, pulsacao, 26, 60, m, 55, 90).
+marcador(psm09, pulsacao, 18, 25, f, 55, 80).
+marcador(psm10, pulsacao, 26, 60, f, 60, 100).
+marcador(psm11, pulsacao, 61, 95, f, 70, 120).
+marcador(psm12, pulsacao, 61, 95, m, 60, 120).
+marcador(prm13, pressao, 18, 25, m, 70, 80).
+marcador(prm14, pressao, 18, 25, f, 65, 85).
+marcador(prm15, pressao, 26, 60, m, 70, 90).
+marcador(prm16, pressao, 26, 60, f, 80, 90).
+marcador(prm17, pressao, 61, 95, f, 60, 98).
+marcador(prm18, pressao, 61, 95, m, 65, 90).
+
+%--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------.
+% Invariantes que designam restrições à inserção de conhecimento.
+
+%Invariante que impede o registo de um novo utente com IDutente já existente.
+
+
++utente(ID,N,D,M,A,S)::(findall(ID,utente(ID,_,_,_,_,_),X),
+	length(X,H), H==1).
+	
+
+% Invariante que impede o registo de um novo ato com IDato já existente.
+
++ato(A,_,_,_,_,_,_,_,_,_)::(findall(A,ato(A,_,_,_,_,_,_,_,_,_),S),
+	length(S,H), H==1).
+
+% Invariante que impede a remoção de utentes com atos associados.
+
+-utente(ID,N,D,M,An,S)::(findall(ID,ato(IDato,_,_,_,ID,_,_,_,_,_),X),
+	length(X,H),H==0).
+
+
+
+%Invariante que impede o registo de novos marcadores.
+
++marcador(IDm,_,_,_,_,_,_)::(findall(IDm,marcador(IDm,_,_,_,_,_,_),S),
+	length(S,H),H==1).
+
+%---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------.
+evolucao(T):- 
+	findall(I,+T::I,Linv),
+	insercao(T),
+	teste(Linv).
+
+insercao(T):- assertz(T).
+insercao(T):- retract(T),!,fail.
+
+teste([]).
+teste([R|LR]):- R,teste(LR).
+
+%Extensão do predicado que permite a involução do conhecimento.
+
+involucao(T):- findall(I, -T::I,Linv),
+	remocao(T),
+	teste(Linv).
+
+remocao(T):- retract(T).
+remocao(T):- !,fail.
+
+
+teste([]).
+teste([R|LR]):- R,teste(LR).
+
+%---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------.
+
+%Extensão do meta-predicado do sistema de inferencia  si:Questao, Resposta
+
+si(Questao,verdadeiro):- Questao.
+si(Questao,falso):- -Questao.
+si(Questao,desconhecido):- nao(Questao), nao(-Questao).
+
+%Extensão do meta-predicado do sistema de inferencia  sic: Questão1, operador lógico, Questao2, Resposta 
+sic(Q1,Q2,verdadeiro):- (si(Q1,verdadeiro),si(Q2,verdadeiro)).
+sic(Q1,Q2,falso):-(si(Q1,falso),si(Q2,falso)).
+sic(Q1,Q2,falso):-(si(Q1,verdadeiro),si(Q2,falso)).
+sic(Q1,Q2,falso):-(si(Q1,falso),si(Q2,verdadeiro)).
+sic(Q1,Q2,falso):-(si(Q1,falso),si(Q2,desconhecido)).
+sic(Q1,Q2,falso):-(si(Q1,desconhecido),si(Q2,falso)).
+sic(Q1,Q2,desconhecido):-(si(Q1,desconhecido),si(Q2,desconhecido)).
+sic(Q1,Q2,desconhecido):-(si(Q1,verdadeiro),si(Q2,desconhecido)).
+sic(Q1,Q2,desconhecido):-(si(Q1,desconhecido),si(Q2,verdadeiro)).
+
+%(Q1;Q2):-si(Q1,R1);si(Q2,R2).
+sic(Q1;Q2,verdadeiro):-(si(Q1,verdadeiro);si(Q2,verdadeiro)).
+sic(Q1;Q2,falso):-(si(Q1,falso);si(Q2,falso)).
+sic(Q1;Q2,verdadeiro):-(si(Q1,verdadeiro);si(Q2,falso)).
+sic(Q1;Q2,verdadeiro):-(si(Q1,falso);si(Q2,verdadeiro)).
+sic(Q1;Q2,desconhecido):-(si(Q1,falso);si(Q2,desconhecido)).
+sic(Q1;Q2,desconhecido):-(si(Q1,desconhecido);si(Q2,falso)).
+sic(Q1;Q2,desconhecido):-(si(Q1,desconhecido);si(Q2,desconhecido)).
+sic(Q1;Q2,verdadeiro):-(si(Q1,verdadeiro);si(Q2,desconhecido)).
+sic(Q1;Q2,verdadeiro):-(si(Q1,desconhecido);si(Q2,verdadeiro)).
+
+%---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------.
+%Predicado verificar se esta dentro dos paramentros.
+
+verificar(IDm,pulsacao,ID,IDato):-
+    ato(IDato,D,M,A,ID,I,C,P,Prmin,Prmax),
+    marcador(IDm,pulsacao,IMin,IMax,S,Min,Max),
+    Min=<P,
+    P=<Max.
+
+verificar(IDm,colesterol,ID,IDato):-
+    ato(IDato,D,M,A,ID,I,C,P,Prmin,Prmax),
+    marcador(IDm,colesterol,IMin,IMax,S,Min,Max),
+    Min=<C,
+    C=<Max.
+
+verificar(IDm,pressao,ID,IDato):-
+    ato(IDato,D,M,A,ID,I,C,P,Prmin,Prmax),
+    marcador(IDm,pressao,IMin,IMax,S,Min,Max),
+    (Min*0.90)=<Prmin,
+    Prmin=<(Min*1.1),
+    (Max*0.90)=<Prmax,
+    Prmax=<(Max*1.1).
+   
+verifica(ID,D,M,A,saudavel):-
+    utente(ID,_,_,_,_,S),
+    ato(IDato,D,M,A,ID,I,C,P,Prmin,Prmax),
+    marcador(IDm1,pulsacao,IMin1,IMax1,S,Min1,Max1),
+    marcador(IDm2,colesterol,IMin2,IMax2,S,Min2,Max2),
+    marcador(IDm3,pressao,IMin3,IMax3,S,Min3,Max3),
+    IMin1=<I,
+    I=<IMax1,
+    IMin2=<I,
+    I=<IMax2,
+    IMin3=<I,
+    I=<IMax3,
+    verificar(IDm1,pulsacao,ID,IDato),
+    verificar(IDm2,colesterol,ID,IDato),
+    verificar(IDm3,pressao,ID,IDato).
+
+verifica(ID,D,M,A,nao_saudavel):- nao(verifica(ID,D,M,A,suadavel)).
+
+
+%Predicado para verificar quantos atos tem um utente.
+
+quantosatos(IDutente,R):-(findall(IDato,ato(IDato,_,_,_,IDutente,_,_,_,_,_),S),
+	length(S,H), R=H).
+
+%Predicato para verificar quantos utentes existem de um dado sexo.
+
+quantosgenero(S,R):- findall(S,utente(_,_,_,_,_,S), X),
+	length(X,H),R=H.
+
+%identificacao de utentes por nome e género.
+nomeutente(N,R):- findall((U,N,D,M,A,S), utente(U,N,D,M,A,S),R).
+sexoutente(G,R):- findall((U,N,D,M,A,G), utente(U,N,D,M,A,G),R).
+
+%Identificar utente por idade.
+idade(I,L):- findall((I,U,N,D,M,A,G), (ato(_,_,_,_,U,I,_,_,_,_),utente(U,N,D,M,A,G)),L).
+idadeutente(I,R):- idade(I,L), apagarrepetido(L,R).
+
+%Predicados auxiliares.
+apagarrepetido([0|_],_).
+apagarrepetido([X|L],[X|R]):- apagar(X,L,N), apagarrepetido(N,R).
+
+apagar(X,[],0).
+apagar(X,[X|Y],Y):- apagar(X,Y,L).
+apagar(X, [Y|H], [Y,L]):- X\=Y, apagar(X,H,L).
+
+%--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------.
+% Conhecimento Perfeito Negativo associado ao predicado utente:o utente com este idutente nao nasceu neste dia.
+
+-utente(ID,N,D,M,A,S):- nao(utente(ID,N,D,M,A,S)),
+	nao(excecao(utente(ID,N,D,M,A,S))).
+
+-utente(400400400,joao,22,07,2020,m).
+
+
+% Conhecimento Perfeito Negativo associado ao predicado ato.
+
+-ato(IDato,D,M,A,IDutente,I,C,P,Prmin,Prmax):- nao(ato(ID,D,M,A,IDutente,I,C,P,Prmin,Prmax)),
+	nao(excecao(ato(ID,D,M,A,IDutente,I,C,P,Prmin,Prmax))).
+
+-ato(gmr4000,10,09,2001,678567456,45,130,65,60,110).
+
+
+% Conhecimento Perfeito Negativo associado ao predicado marcador: o intervalo de pressoes para esta faixa etaria nao é este.
+
+-marcador(IDmarc,A,Imin,Imax,S,Min,Max):- nao(marcador(IDmarc,A,Imin,Imax,S,Min,Max)),
+	nao(excecao(marcador(IDmarc,A,Imin,Imax,S,Min,Max))).
+-marcador(prm18, pressao, 61, 95, m, 60, 100).
+
+
+% Conhecimento imperfeito do tipo impreciso associado ao predicado utente: sabe-se que o utente antonio ou nasceu em 1967 ou em 1970.
+excecao(utente(123123456,antonio,03,04,1957,m)).
+excecao(utente(123123456,antonio,03,04,1960,m)).
+
+% Conhecimento imperfeito impreciso (predicado ato).
+% O utente antonio ou tem 55 ou 58 anos.
+excecao(ato(gmr123,30,06,2022,123123456,58,120,70,60,120)).
+excecao(ato(gmr123,30,06,2022,123123456,55,120,70,60,120)).
+
+
+% O aparelho de medicao da pulsacao estava estragado, apresentando um erro de medicao de 0.1- o utente antonio ou teve uma pulsacao de 63 ou de 77.
+excecao(ato(gmr123,30,06,2022,123123456,55,120,63,60,120)).
+excecao(ato(gmr123,30,06,2022,123123456,55,120,77,60,120)).
+
+% Conhecimento imperfeito do tipo incerto associado ao predicado utente: nao se sabe ao certo em que ano nasceu o utente joaquim, mas sabe-se que tem mais de 50 anos (nasceu antes de 1972).
+excecao(utente(ID,N,D,M,A,S)):- utente(ID,N,D,M,anodesconhecido,S).
+-utente(200200222,joaquim,18,04,A,m):- A>=1972.
+utente(200200222,joaquim,18,04,anodesconhecido,m).
+
+%Conhecimento imperfeito incerto (predicado ato).
+% O utente joaquim tem mais de 50 anos e menos do que 70, mas nao se sabe ao certo a idade.
+
+excecao(ato(ID,D,M,A,IDu,I,C,P,Prmin,Prmax)):-
+	ato(ID,D,M,A,IDu,idadedesconhecida,C,P,Prmin,Prmax).
+-ato(gmr222,30,06,2013,200200222,I,30,80,60,120):- I>=70.
+-ato(gmr222,30,06,2013,200200222,I,30,80,60,120):- I=<50.
+ato(gmr222,30,06,2013,200200222,idadedesconhecida,30,80,60,120).
+
+% Conhecimento imperfeito do tipo interdito associado ao predicado utente: ernesto desconhece a sua data de nascimento e nao tem forma de voltar a sabe-la.
+
+utente(200200233,ernesto,18,06,anodesconhecido,m).
+
+excecao(utente(ID,N,D,M,An,S)):- utente(ID,N,18,06,anodesconhecido,S).
+
+interdito(anodesconhecido).
++utente(ID,N,D,M,A,S)::(findall(A,utente(200200233,ernesto,18,06,A,m),P),
+	nao(interdito(A)),
+	length(P,J),J==0).
+
+%Conhecimento imperfeito interdito- predicado ato.
+%As analises do utente sebastiao foram perdidas pelo que e impossivel saber o seu valor.
+
+ato(gmr200,30,09,2020,200200200,52,colesteroldesconhecido,50,60,100).
+excecao(ato(ID,D,M,A,IDu,I,C,P,Prmin,Prmax)):-
+	ato(gmr200,30,09,2020,200200200,52,colesteroldesconhecido,50,60,100).
+interdito(colesteroldesconhecido).
++ato(IDato,D,M,A,IDutente,I,C,P,Prmin,Prmax)::(findall(C,ato(gmr200,30,09,2020,200200200,52,C,50,60,100),S),nao(interdito(C),length(S,N),N==0)).
+
+%------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
